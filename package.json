@@ -1,0 +1,26 @@
+{
+  "name": "ds-relay",
+  "version": "1.0.0",
+  "description": "Smart Contract infrastructure for relaying signed transactions, allowing users not to worry about paying for gas.",
+  "main": "generateSigs.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dapphub/ds-relay.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dapphub/ds-relay/issues"
+  },
+  "homepage": "https://github.com/dapphub/ds-relay#readme",
+  "dependencies": {
+    "ethereumjs-util": "^5.2.0",
+    "ethereumjs-wallet": "^0.6.0"
+  }
+}
