@@ -13,11 +13,15 @@ contract RelayTest is DSTest, ECVerify {
     Mover mover;
     Lad ali;
     Lad bob;
-    address cal;
-    address del;
-    uint8 v = 27;
-    bytes32 r = 0x704162c974159f4ec1ed8e453f1cc63852a5d1724e210ea6a64fb1422f24f97d;
-    bytes32 s = 0x70caacdf7f94cd16e9018eb5c7b7b7114ae64900a3adbb33bc38caf419c279bd;
+    address cal = 0xb68ffcb68368f38e6f10fb92042f828a21dc2855;
+    address del = 0xdd2d5d3f7f1b35b7a0601d6a00dbb7d44af58479;
+    uint wad = 2;
+    uint fee = 1;
+    uint nonce = 0;
+    uint8 v = 28;
+    bytes32 r = 0x504ee47c8e23b9802794a52b86a70eef703b1ab0c2c176eab34631f0e8c0113a;
+    bytes32 s = 0x6491585a82273d6f9647cdaa6c06299f91b0aa633ff8027301708ae993a519e1;
+    bytes32 hash = 0xd1c4aaacba9d481c25d3648b6fb10b01fbb7945dd0aef35199372ccb43e6dab9;
 
     event LogBytes(bytes b);
 
@@ -26,8 +30,6 @@ contract RelayTest is DSTest, ECVerify {
       mover = Mover(relay.mover());
       ali = new Lad();
       bob = new Lad();
-      cal = 0xd79d4832f5eaf63c69e980a49c1297281b3ba051;
-      del = 0xdd2d5d3f7f1b35b7a0601d6a00dbb7d44af58479;
       mover.mint(ali, 100);
       mover.mint(cal,80);
     }
@@ -51,11 +53,12 @@ contract RelayTest is DSTest, ECVerify {
     function test_tryverify() returns (bool,address) {
       bool success;
       address who;
+
       (success, who) = safer_ecrecover(
-                       0x27ec426b29b20cf6acaa918e60ce180a72ab40b5c2ed2add2a264cd6277941c8,
-                       27,
-                       0x704162c974159f4ec1ed8e453f1cc63852a5d1724e210ea6a64fb1422f24f97d,
-                       0x70caacdf7f94cd16e9018eb5c7b7b7114ae64900a3adbb33bc38caf419c279bd
+                       keccak256(del,wad,fee,nonce),
+                       v,
+                       r,
+                       s
                        );
       assertEq(who,cal);
     }
