@@ -28,16 +28,16 @@ contract Relay is ECVerify {
     mover = new Mover();
   }
   
-  function relay(address dst, uint wad, uint fee, uint nonce, uint8 v, bytes32 r, bytes32 s) public returns (bool) {
+  function relay(address dst, uint wad, uint fee, uint nonce, uint8 v, bytes32 r, bytes32 s, address _src) public {
     bytes32 hash = keccak256(dst, wad, fee, nonce);
     address src;
     bool success;
     (success, src) = safer_ecrecover(hash,v,r,s);
     require(success);
+    require(_src == src);
     require(nonce == nonces[src]);
     mover.move(src, msg.sender, fee);
     mover.move(src, dst, wad);
     nonces[dst]++;
-    return true;
   }
 }

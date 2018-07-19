@@ -53,7 +53,6 @@ contract RelayTest is DSTest, ECVerify {
     function test_tryverify() returns (bool,address) {
       bool success;
       address who;
-
       (success, who) = safer_ecrecover(
                        keccak256(del,wad,fee,nonce),
                        v,
@@ -81,7 +80,7 @@ contract RelayTest is DSTest, ECVerify {
       assertEq(mover.balanceOf(cal),80);
       assertEq(mover.balanceOf(del),0);
       assertEq(mover.balanceOf(this),0);
-      relay.relay(del, 2, 1, 0, v, r, s);
+      relay.relay(del, 2, 1, 0, v, r, s, cal);
       assertEq(mover.balanceOf(cal),77);
       assertEq(mover.balanceOf(del),2);
       assertEq(mover.balanceOf(this),1);

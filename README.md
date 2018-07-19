@@ -1,44 +1,41 @@
 # ds-relay
-Smart Contract infrastructure for relaying signed transactions, allowing users not to worry about paying for gas.
+Simple relay functionality that can be added to a token contract to allow users to pay for simple token transfers
+_with the token being transacted_ rather than paying for gas costs using ether.
 
-The relay contract can take two different forms, depending on if payments happen on chain or off chain.
+To use this functionality, the user signs a message which specifies:
 
-## Off chain payment Relay contract
-If payments are made off chain, the relay contract is deployed once for every `user`, and takes a signed message containing the following information:
+* `src`, the `address` of the receiver
+* `wad`, the token amount to transfer to the receiver
+* `fee`, the token amount to transfer to the relayer
+* `nonce`, for replay protection.
 
-- Receiving address
-- Data (EVM bytecode)
-- Nonce
+The signed message, along with the information above is then relayed off chain to some `relayer`,
+which is willing to pay the gas cost for executing the transfer in exchange for the `fee`.
 
-After verifying the signature using ECRecover, the Relay contract simply forwards the transaction using DELEGATECALL.
-
-## On chain payment Relay contract 
-
-The on chain payment Relay contract requires payment to be made in any token extended with the following functionality `payOrigin`:
+Assuming a simple `move` function defined by:
 ```
-mapping (address => uint256) nonces;
-
-function payOrigin(uint amount, uint nonce, bytes sig) public {
-    address from = ECRecover(sha3(amount, nonce), sig);
-    require (amount <= balances[from] && nonces[from] == nonce)
-    require (nonces[from]
-    balances[from] -= amount;
-    balances[tx.origin] += amount;
-    nonces[from] += 1;
-}
-```
-
-If extendedToken is a contract admitting such a function, then an off chain payment relay contract
-would offer the functionality:
+  function move(address src, address dst, uint wad) public {
+    balances[src] = sub(balances[src], wad);
+    balances[dst] = add(balances[dst], wad);
+  }
 
 ```
-mapping (address => uint256) nonces;
-
-function tx_relay(address to, uint nonce1, uint nonce2, bytes data, uint fee, bytes sig1, bytes sig2) public {
-    address from = ECRecover(sha3(to, nonce1, nonce2, data, fee, sig1), sig2);
-    require (nonces[from] == nonce1);
-    ExtendedToken.payOrigin(fee, nonce2, sig1)
-    external_call(to, data);
-    nonces[from] += 1;
-}
+the on chain relay verification function can be defined as:
 ```
+  function relay(address dst, uint wad, uint fee, uint nonce, uint8 v, bytes32 r, bytes32 s, address _src) public {
+    bytes32 hash = keccak256(dst, wad, fee, nonce);
+    address src;
+    bool success;
+    (success, src) = safer_ecrecover(hash,v,r,s);
+    require(success);
+    require(_src == src);
+    require(nonce == nonces[src]);
+    mover.move(src, msg.sender, fee);
+    mover.move(src, dst, wad);
+    nonces[dst]++;
+  }
+```
+where `nonces` is a mapping of addresses to uints.
+
+## Off chain signature generation:
+Signatures can be easily generated using `ethereumjs-util`.
