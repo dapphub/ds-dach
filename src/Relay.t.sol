@@ -3,12 +3,11 @@ pragma solidity ^0.4.23;
 import "ds-test/test.sol";
 
 import "./Relay.sol";
-import "./ECVerify.sol";
 
 contract Lad {
 }
 
-contract RelayTest is DSTest, ECVerify {
+contract RelayTest is DSTest {
     Relay relay;
     Mover mover;
     Lad ali;
@@ -32,6 +31,8 @@ contract RelayTest is DSTest, ECVerify {
       bob = new Lad();
       mover.mint(ali, 100);
       mover.mint(cal,80);
+      assertTrue(mover.balanceOf(ali) == 100);      
+      assertEq(mover.balanceOf(cal),80);
     }
 
     function testFail_basic_sanity() public {
@@ -40,53 +41,25 @@ contract RelayTest is DSTest, ECVerify {
 
     function test_basic_sanity() public {
       assertTrue(true);
-      assertTrue(mover.balanceOf(ali) == 100);
       assertTrue(mover.balanceOf(cal) == 80);
     }
 
     function test_oneMove() public {
+      assertTrue(mover.balanceOf(ali) == 100);      
+      assertEq(mover.balanceOf(bob),0);
       mover.move(ali, bob, 10);
       assertTrue(mover.balanceOf(bob) == 10);
       assertTrue(mover.balanceOf(ali) == 90);
     }
 
-    function test_tryverify() returns (bool,address) {
-      bool success;
-      address who;
-      (success, who) = safer_ecrecover(
-                       keccak256(del,wad,fee,nonce),
-                       v,
-                       r,
-                       s
-                       );
-      assertEq(who,cal);
-    }
-    /*
-    function test_recovery() public {
-      bool success;
-      address who;
-      (success, who) = safer_ecrecover(keccak256(del,2,1,0),v,r,s);
-      assertEq(cal,who);
-      assertTrue(success);
-      }*/
-
-    function test_whatver() public {
-      assertEq(mover.balanceOf(cal),80);
-      assertEq(mover.balanceOf(del),0);
-      assertEq(mover.balanceOf(this),0);
-    }
-    
     function test_relay() public {
       assertEq(mover.balanceOf(cal),80);
       assertEq(mover.balanceOf(del),0);
       assertEq(mover.balanceOf(this),0);
-      relay.relay(del, 2, 1, 0, v, r, s, cal);
+      relay.relay(del, 2, 1, 0, v, r, s);
       assertEq(mover.balanceOf(cal),77);
       assertEq(mover.balanceOf(del),2);
       assertEq(mover.balanceOf(this),1);
     }
-    
-    function test_tenRelays() public {
-    }
-    
+     
 }
