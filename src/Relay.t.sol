@@ -12,17 +12,15 @@ contract RelayTest is DSTest {
     Mover mover;
     Lad ali;
     Lad bob;
-    address cal = 0xb68ffcb68368f38e6f10fb92042f828a21dc2855;
+    address cal = 0xb494c6117809585c35f3b48105206128a7681eb0;
     address del = 0xdd2d5d3f7f1b35b7a0601d6a00dbb7d44af58479;
     uint wad = 2;
     uint fee = 1;
     uint nonce = 0;
-    uint8 v = 28;
-    bytes32 r = 0x504ee47c8e23b9802794a52b86a70eef703b1ab0c2c176eab34631f0e8c0113a;
-    bytes32 s = 0x6491585a82273d6f9647cdaa6c06299f91b0aa633ff8027301708ae993a519e1;
-    bytes32 hash = 0xd1c4aaacba9d481c25d3648b6fb10b01fbb7945dd0aef35199372ccb43e6dab9;
-
-    event LogBytes(bytes b);
+    uint8 v = 27;
+    bytes32 r = 0x3265510535b97060ab7090772697088d1575614c775f79ea53456d3971fb8862;
+    bytes32 s = 0x2e92bb13db00825610090026e29cd47f49b72b718f94c75a5dfa0bf55ad1f492;
+    bytes32 hash = 0x355765b4ff2950ea8e453ae241b64f5b899685fa8a0fd0e331244756d2e555df;
 
     function setUp() public {
       relay = new Relay();
@@ -56,7 +54,7 @@ contract RelayTest is DSTest {
       assertEq(mover.balanceOf(cal),80);
       assertEq(mover.balanceOf(del),0);
       assertEq(mover.balanceOf(this),0);
-      relay.relay(del, 2, 1, 0, v, r, s);
+      relay.relay(cal, del, 2, 1, 0, v, r, s);
       assertEq(mover.balanceOf(cal),77);
       assertEq(mover.balanceOf(del),2);
       assertEq(mover.balanceOf(this),1);
