@@ -1,10 +1,13 @@
 # ds-relay
+TODO: Incorporate [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md) signing schema.
+
 Simple relay functionality that can be added to a token contract to allow users to pay for simple token transfers
 _with the token being transacted_ rather than paying for gas costs using ether.
 
 To use this functionality, the user signs a message which specifies:
 
-* `src`, the `address` of the receiver
+* `src`, the `address` of the sender (as a security precaution; ecrecover may return random addresses given faulty input.)
+* `dst`, the `address` of the receiver
 * `wad`, the token amount to transfer to the receiver
 * `fee`, the token amount to transfer to the relayer
 * `nonce`, for replay protection.
@@ -12,7 +15,7 @@ To use this functionality, the user signs a message which specifies:
 The signed message, along with the information above is then relayed off chain to some `relayer`,
 which is willing to pay the gas cost for executing the transfer in exchange for the `fee`.
 
-Assuming a simple `move` function defined by:
+The relay function requires authority to call a `move`-function which updates token balances:
 ```
   function move(address src, address dst, uint wad) public {
     balances[src] = sub(balances[src], wad);
@@ -22,12 +25,13 @@ Assuming a simple `move` function defined by:
 ```
 the on chain relay verification function can be defined as:
 ```
-  function relay(address dst, uint wad, uint fee, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
-    bytes32 hash = keccak256(dst, wad, fee, nonce);
-    address src;
+  function relay(address src, address dst, uint wad, uint fee, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
+    bytes32 hash = keccak256(src, dst, wad, fee, nonce);
+    address _src;
     bool success;
-    (success, src) = safer_ecrecover(hash,v,r,s);
+    (success, _src) = safer_ecrecover(hash,v,r,s);
     require(success);
+    require(_src == src);
     require(nonce == nonces[src]);
     mover.move(src, msg.sender, fee);
     mover.move(src, dst, wad);
