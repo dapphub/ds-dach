@@ -1,23 +1,52 @@
-const wallet = require('ethereumjs-wallet');
-const util = require('ethereumjs-util');
+const ethUtil = require('ethereumjs-util');
+const sigUtil = require('eth-sig-util');
+const utils = sigUtil.TypedDataUtils;
 
-const Cal = wallet.generate();
-const calPrivKey = Cal.getPrivateKey();
-const calPubKey = util.bufferToHex(Cal.getPublicKey());
-const calAddress = util.bufferToHex(Cal.getAddress());
-console.log('cal address:' + calAddress);
-const arg1 = util.setLengthLeft(util.toBuffer(2),32);
-const arg2 = util.setLengthLeft(util.toBuffer(1),32);
-const arg3 = util.setLengthLeft(util.toBuffer(0),32);
-//console.log(msg);
-const msg = calAddress + "dd2d5d3f7f1b35b7a0601d6a00dbb7d44af58479"+arg1.toString('hex')+arg2.toString('hex')+arg3.toString('hex');
-const hash = util.keccak256(msg);
-console.log('Hashing the following string: ' + msg);
-console.log('Yields hash: ' + util.bufferToHex(hash,'hex'));
-const sig = util.ecsign(hash, calPrivKey);
-const sign = util.bufferToHex(sig.r,'hex') + util.bufferToHex(sig.s,'hex') + util.bufferToInt(sig.v);
-const v = util.bufferToInt(sig.v);
-console.log(calAddress + ' signing this hash yields:')
-console.log("sig.r:"+ util.bufferToHex(sig.r,'hex'))
-console.log("sig.s:"+ util.bufferToHex(sig.s,'hex'))
-console.log("sig.v:"+ v)
+//Our lad Cal wants to relay 2 dai to del, paying a 1 dai fee to msg.sender
+
+const calprivKeyHex = '4af1bceebf7f3634ec3cff8a2c38e51178d5d4ce585c52d6043e5e2cc3418bb0'
+const calprivKey = new Buffer(calprivKeyHex, 'hex')
+const cal = ethUtil.privateToAddress(calprivKey);
+const del = new Buffer('dd2d5d3f7f1b35b7a0601d6a00dbb7d44af58479', 'hex');
+console.log('cals address: ' + cal.toString('hex'));
+console.log('dels address: ' + del.toString('hex'));
+const typedData = {
+  types: {
+      EIP712Domain: [
+          { name: 'name', type: 'string' },
+          { name: 'version', type: 'string' },
+          { name: 'chainId', type: 'uint256' },
+          { name: 'verifyingContract', type: 'address' },
+      ],
+      Cheque: [
+          { name: 'src', type: 'address' },
+          { name: 'dst', type: 'address' },
+          { name: 'wad', type: 'uint256' },
+          { name: 'fee', type: 'uint256' },
+          { name: 'nonce', type: 'uint256' },
+      ],
+  },
+  primaryType: 'Cheque',
+  domain: {
+      name: 'Dai relay',
+      version: '1',
+      chainId: 1,
+      verifyingContract: '0xdeadbeef',
+  },
+  message: {
+      src: '0x'+cal.toString('hex'),
+      dst: '0x'+del.toString('hex'),
+      wad: 2,
+      fee: 1,
+      nonce: 0,
+  },
+};
+
+let hash = ethUtil.bufferToHex(utils.hashStruct('EIP712Domain', typedData.domain, typedData.types))
+console.log('EIP712DomainHash: ' + hash);
+hash = ethUtil.bufferToHex(utils.hashType('Cheque', typedData.types))
+console.log('Cheque Typehash: ' + hash);
+hash = ethUtil.bufferToHex(utils.hashStruct('Cheque', typedData.message, typedData.types))
+console.log('Cheque (from cal to del) hash: ' + hash);
+const sig = sigUtil.signTypedData(calprivKey, { data: typedData });
+console.log('signed check: ' + sig);

@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/dapphub/ds-relay#readme",
   "dependencies": {
-    "ethereumjs-util": "^5.2.0",
-    "ethereumjs-wallet": "^0.6.0"
+    "eth-sig-util": "^2.0.1",
+    "ethereumjs-util": "^5.2.0"
   }
 }

@@ -1,8 +1,7 @@
 # ds-relay
-TODO: Incorporate [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md) signing schema.
+Now features typed signing à la [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md)!
 
-Simple relay functionality that can be added to a token contract to allow users to pay for simple token transfers
-_with the token being transacted_ rather than paying for gas costs using ether.
+Simple relay functionality that can be added to a token contract to allow users to pay for simple token transfers _with the token being transacted_ rather than paying for gas costs using ether.
 
 To use this functionality, the user signs a message which specifies:
 
@@ -25,29 +24,28 @@ The relay function requires authority to call a `move`-function which updates to
 ```
 the on chain relay verification function can be defined as:
 ```
-  function relay(address src, address dst, uint wad, uint fee, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
-    bytes32 hash = keccak256(src, dst, wad, fee, nonce);
-    address _src;
-    bool success;
-    (success, _src) = safer_ecrecover(hash,v,r,s);
-    require(success);
-    require(_src == src);
-    require(nonce == nonces[src]);
-    mover.move(src, msg.sender, fee);
-    mover.move(src, dst, wad);
-    nonces[dst]++;
+  function relay(address _src, address _dst, uint _wad, uint _fee, uint _nonce, uint8 v, bytes32 r, bytes32 s) public {
+    Cheque memory cheque = Cheque({
+      src : _src,
+      dst : _dst,
+      wad : _wad,
+      fee : _fee,
+      nonce : _nonce
+    });
+    require(verify(cheque, v, r, s));
+    require(cheque.nonce == nonces[cheque.src]);
+    mover.move(cheque.src, msg.sender, cheque.fee);
+    mover.move(cheque.src, cheque.dst, cheque.wad);
+    nonces[cheque.src]++;
   }
 ```
 where `nonces` is a mapping of addresses to uints.
 
-## Off chain signature generation:
-Signatures can be easily generated using `ethereumjs-util`.
+## Signature generation
+As soon as [this PR is merged into Metamask](https://github.com/MetaMask/metamask-extension/pull/4803#issuecomment-407828165) typed signatures can be generated using the metamask browser plug in. 
 
+For testing purposes there is an easy script `generateSigs.js` that shows how to use [eth-sig-util](https://github.com/MetaMask/eth-sig-util) for this purpose.
 
-## Generalized relay a.k.a. ds-proxy / contract wallets.
-Folklore has it that the relay functionality can be generalized to execute any transaction on eco-friendly (no gas) mode.
-
-Such functionality can be understood as an 'all-inclusive', do-it-yourself account abstraction.
-One key difference is that the use of such proxies would require users to keep their assets in the proxy, which is `owned` by their ethereum address
-The ds-relay functionality takes a more modular approach, which is complementary to the ds-proxy.
-
+## Missing features
+- The EIP712 domain separator field should take the address of the verifying contract as input, but right now it is hard coded as 0xdeadbeef.
+- Possible gas optimization
