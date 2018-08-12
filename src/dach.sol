@@ -19,7 +19,7 @@ contract Mover is DSMath {
   }
 }
 
-contract Relay {
+contract Dach {
   mapping (address => uint256) public nonces;
   bytes32 public DOMAIN_SEPARATOR;
   
@@ -30,7 +30,7 @@ contract Relay {
   );
 
   bytes32 constant public CHEQUE_TYPEHASH = keccak256(
-       "Cheque(address src,address dst,uint256 wad,uint256 fee,uint256 nonce)"
+       "Cheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce)"
   );
 
 
@@ -42,36 +42,41 @@ contract Relay {
   }
 
   struct Cheque {
-    address src;
-    address dst;
-    uint256 wad;
+    address sender;
+    address receiver;
+    uint256 amount;
     uint256 fee;
     uint256 nonce;
   }
 
   constructor() {
     mover = new Mover();
-    DOMAIN_SEPARATOR = hash("Dai relay", "1", 1, 0xdeadbeef);
-  }
-
-  function hash(string name, string version, uint256 chainId, address verifyingContract) pure returns (bytes32) {
-        return keccak256(abi.encode(
-            EIP712DOMAIN_TYPEHASH,
-            keccak256(bytes(name)),
-            keccak256(bytes(version)),
-            chainId,
-            verifyingContract
+    DOMAIN_SEPARATOR = hash(EIP712Domain({
+            name : "Dai Automated Clearing House",
+            version: "1",
+            chainId: 1,
+            verifyingContract: 0xdeadbeef}
         ));
   }
 
-  function hash(address src, address dst, uint256 wad, uint256 fee, uint256 nonce) pure returns (bytes32) {
+  function hash(EIP712Domain eip712Domain) internal pure returns (bytes32) {
+        return keccak256(abi.encode(
+            EIP712DOMAIN_TYPEHASH,
+            keccak256(bytes(eip712Domain.name)),
+            keccak256(bytes(eip712Domain.version)),
+            eip712Domain.chainId,
+            eip712Domain.verifyingContract
+        ));
+  }
+
+  function hash(Cheque cheque) internal pure returns (bytes32) {
         return keccak256(abi.encode(
             CHEQUE_TYPEHASH,
-            src,
-            dst,
-            wad,
-            fee,
-            nonce
+            cheque.sender,
+            cheque.receiver,
+            cheque.amount,
+            cheque.fee,
+            cheque.nonce
         ));
     }
 
@@ -80,24 +85,24 @@ contract Relay {
     bytes32 digest = keccak256(abi.encodePacked(
                         "\x19\x01",
                         DOMAIN_SEPARATOR,
-                        hash(cheque.src, cheque.dst, cheque.wad, cheque.fee, cheque.nonce)
+                        hash(cheque)
                      ));
-    return ecrecover(digest, v, r, s) == cheque.src;
+    return ecrecover(digest, v, r, s) == cheque.sender;
   }
 
   
-  function relay(address _src, address _dst, uint _wad, uint _fee, uint _nonce, uint8 v, bytes32 r, bytes32 s) public {
+  function clear(address _sender, address _receiver, uint _amount, uint _fee, uint _nonce, uint8 v, bytes32 r, bytes32 s) public {
     Cheque memory cheque = Cheque({
-      src : _src,
-      dst : _dst,
-      wad : _wad,
+      sender : _sender,
+      receiver : _receiver,
+      amount : _amount,
       fee : _fee,
       nonce : _nonce
     });
     require(verify(cheque, v, r, s));
-    require(cheque.nonce == nonces[cheque.src]);
-    mover.move(cheque.src, msg.sender, cheque.fee);
-    mover.move(cheque.src, cheque.dst, cheque.wad);
-    nonces[cheque.src]++;
+    require(cheque.nonce == nonces[cheque.sender]);
+    mover.move(cheque.sender, msg.sender, cheque.fee);
+    mover.move(cheque.sender, cheque.receiver, cheque.amount);
+    nonces[cheque.sender]++;
   }
 }
