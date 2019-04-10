@@ -1,108 +1,80 @@
-pragma solidity ^0.4.23;
-import "ds-math/math.sol";
+pragma solidity >=0.4.23;
+import "./dai.sol";
 
-contract Mover is DSMath {
-  mapping (address => uint256) balances;
+// Solidity Interface
 
-  function balanceOf(address lad) public returns (uint) {
-    return balances[lad];
-  }
-
-  function move(address src, address dst, uint wad) public returns (bool) {
-    balances[src] = sub(balances[src], wad);
-    balances[dst] = add(balances[dst], wad);
-    return true;
-  }
-
-  function mint(address lad, uint wad) public {
-    balances[lad] = add(balances[lad], wad);
-  }
+contract Uniswap {
+    function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens, uint256 deadline, address recipient) external returns (uint256  eth_bought);
 }
 
+
 contract Dach {
+  Dai dai;
+  Uniswap uniswap;
   mapping (address => uint256) public nonces;
+
+  // --- EIP712 niceties ---
   bytes32 public DOMAIN_SEPARATOR;
-  
-  Mover public mover;
-
-  bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
-        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-  );
-
   bytes32 constant public CHEQUE_TYPEHASH = keccak256(
-       "Cheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce)"
+     "Cheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce, uint256 deadline)"
   );
 
+  bytes32 constant public SWAP_TYPEHASH = keccak256(
+     "Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 deadline)"
+  );
 
-  struct EIP712Domain {
-    string  name;
-    string  version;
-    uint256 chainId;
-    address verifyingContract;
-  }
-
-  struct Cheque {
-    address sender;
-    address receiver;
-    uint256 amount;
-    uint256 fee;
-    uint256 nonce;
-  }
-
-  constructor() {
-    mover = new Mover();
-    DOMAIN_SEPARATOR = hash(EIP712Domain({
-            name : "Dai Automated Clearing House",
-            version: "1",
-            chainId: 1,
-            verifyingContract: 0xdeadbeef}
+  constructor(Dai _dai, Uniswap _uniswap, string memory version, uint256 chainId) public {
+    dai = _dai;
+    uniswap = _uniswap;
+    DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256("Dai Automated Clearing House"),
+            keccak256(bytes(version)),
+            chainId,
+            address(this)
         ));
-  }
-
-  function hash(EIP712Domain eip712Domain) internal pure returns (bytes32) {
-        return keccak256(abi.encode(
-            EIP712DOMAIN_TYPEHASH,
-            keccak256(bytes(eip712Domain.name)),
-            keccak256(bytes(eip712Domain.version)),
-            eip712Domain.chainId,
-            eip712Domain.verifyingContract
-        ));
-  }
-
-  function hash(Cheque cheque) internal pure returns (bytes32) {
-        return keccak256(abi.encode(
-            CHEQUE_TYPEHASH,
-            cheque.sender,
-            cheque.receiver,
-            cheque.amount,
-            cheque.fee,
-            cheque.nonce
-        ));
-    }
-
-
-  function verify(Cheque cheque, uint8 v, bytes32 r, bytes32 s) internal returns (bool) {
-    bytes32 digest = keccak256(abi.encodePacked(
-                        "\x19\x01",
-                        DOMAIN_SEPARATOR,
-                        hash(cheque)
-                     ));
-    return ecrecover(digest, v, r, s) == cheque.sender;
   }
 
   
-  function clear(address _sender, address _receiver, uint _amount, uint _fee, uint _nonce, uint8 v, bytes32 r, bytes32 s) public {
-    Cheque memory cheque = Cheque({
-      sender : _sender,
-      receiver : _receiver,
-      amount : _amount,
-      fee : _fee,
-      nonce : _nonce
-    });
-    require(verify(cheque, v, r, s));
-    require(cheque.nonce == nonces[cheque.sender]);
-    mover.move(cheque.sender, msg.sender, cheque.fee);
-    mover.move(cheque.sender, cheque.receiver, cheque.amount);
-    nonces[cheque.sender]++;
+  function clear(address sender, address receiver, uint amount, uint fee,
+                 uint nonce, uint deadline, uint8 v, bytes32 r, bytes32 s) public
+  {
+    bytes32 digest =
+      keccak256(abi.encodePacked(
+         "\x19\x01",
+         DOMAIN_SEPARATOR,
+         keccak256(abi.encode(CHEQUE_TYPEHASH,
+                              sender,
+                              receiver,
+                              amount,
+                              fee,
+                              nonce,
+                              deadline))
+      ));
+    require(sender == ecrecover(digest, v, r, s), "invalid cheque");
+    require(nonce == nonces[sender]++);
+    dai.transferFrom(sender, msg.sender, fee);
+    dai.transferFrom(sender, receiver, amount);
+  }
+
+  function swapToEth(address sender, uint amount, uint min_eth, uint fee,
+                     uint nonce, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
+    bytes32 digest =
+      keccak256(abi.encodePacked(
+         "\x19\x01",
+         DOMAIN_SEPARATOR,
+         keccak256(abi.encode(SWAP_TYPEHASH,
+                              sender,
+                              amount,
+                              min_eth,
+                              fee,
+                              nonce,
+                              deadline))
+      ));
+    require(sender == ecrecover(digest, v, r, s), "invalid swap");
+    require(nonce == nonces[sender]++);    
+    dai.transferFrom(sender, address(this), amount);
+    uniswap.tokenToEthTransferInput(amount, min_eth, deadline, sender);
+    dai.transferFrom(sender, msg.sender, fee);
   }
 }
