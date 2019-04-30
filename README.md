@@ -1,5 +1,5 @@
 # ds-dach
-Experimental version deployed on kovan at https://kovan.etherscan.io/address/0xa7e93d24bb15447813216c6fa9f26dfa864d1d3e.
+Experimental version deployed on kovan at https://kovan.etherscan.io/address/0xc2433f48f1db3b5067dc412d403b57a3077a52c0.
 
 
 The clearing house can clear cheques, allowing users to transfer tokens without eth.
