@@ -27,11 +27,29 @@ contract DaiLike {
   function approve(address usr, uint wad) public returns (bool) {}
 }
 
+contract PotLike {
+  function join(uint wad) public {}
+  function exit(uint wad) public {}
+}
+
+contract DaiJoinLike {
+  function join(address usr, uint wad) {}
+  function exit(address usr, uint wad) {}
+}
+
+contract VatLike {
+  function hope(address usr) {}
+}
+
 
 contract Dach {
   DaiLike dai;
   Uniswappy uniswap;
+  PotLike pot;
+  DaiJoinLike daiJoin;
+  VatLike vat;
   mapping (address => uint256) public nonces;
+  mapping (address => uint256) public potBalance;
   string public version;
 
   // --- EIP712 niceties ---
@@ -44,10 +62,23 @@ contract Dach {
      "Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry)"
   );
 
-  constructor(address _dai, address _uniswap, string memory _version, uint256 chainId) public {
+  // --- Arithmetic ---
+  function add(uint x, uint y) internal pure returns (uint z) {
+    require((z = x + y) >= x);
+  }
+
+  function sub(uint x, uint y) internal pure returns (uint z) {
+    require((z = x - y) <= x);
+  }
+
+  constructor(address _dai, address _uniswap, address _pot, address _daiJoin, address _vat, string memory _version, uint256 chainId) public {
     dai = DaiLike(_dai);
     uniswap = Uniswappy(_uniswap);
+    pot = PotLike(_pot);
+    daiJoin = DaiJoinLike(_daiJoin);
+    vat = VatLike(_vat);
     version = _version;
+    vat.hope(daiJoin);
     DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("Dai Automated Clearing House"),
@@ -99,4 +130,27 @@ contract Dach {
     dai.approve(address(uniswap), amount);
     return uniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
+
+
+  function save(address sender, uint amount, uint fee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s, address taxMan) public {
+    //Verify signature stuff
+    require(nonce == nonces[sender]++, "invalid nonce");
+    require(expiry == 0 || now <= expiry, "swap expired");
+    daiJoin.join(amount);
+    pot.join(amount);
+    dai.transferFrom(sender, taxMan, fee);
+    potBalance[sender] = add(potBalance[sender], amount);
+  }
+
+
+  function exit(address sender, uint amount, address benefactor, uint fee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s, address taxMan) public {
+    //Verify signature stuff
+    require(nonce == nonces[sender]++, "invalid nonce");
+    require(expiry == 0 || now <= expiry, "swap expired");
+    pot.exit(amount);
+    daiJoin.exit(benefactor, amount);
+    dai.transferFrom(sender, taxMan, fee);
+    potBalance[sender] = sub(potBalance[sender], amount);
+  }
+
 }
