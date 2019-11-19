@@ -1,11 +1,15 @@
 #!/bin/bash
-# display_usage() {
-#   echo "Usage: <spender> <nonce> <allowed> [expiry]"
-# }
+display_usage() {
+   echo "Usage: <amount> <min_eth> <fee> [nonce] [expiry]"
+}
+if [ "$#" -ne 3 ]; then
+    display_usage
+    exit 0
+fi
 
 #Domain separator data
 VERSION='1'
-CHAIN_ID=1
+CHAIN_ID=99
 ADDRESS=$DACH
 if [ -z "$DACH" ]; then
     echo "DACH address not set"
@@ -20,7 +24,7 @@ $(seth --to-uint256 $ADDRESS) | sed 's/0x//g'))
 #echo $DOMAIN_SEPARATOR
 
 #Permit type data
-SWAP_TYPEHASH=$(seth keccak $(seth --from-ascii "Swap(address sender,uint256 amount,uint256 min_et,uint256 fee,uint256 nonce,uint256 expiry)"))
+SWAP_TYPEHASH=$(seth keccak $(seth --from-ascii "Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry)"))
 #echo $permit_TYPEHASH
 
 #permit data

@@ -9,13 +9,14 @@ if [ "$#" -ne 3 ]; then
 fi
 #Domain separator data
 VERSION='1'
-CHAIN_ID=1
+NAME="Dai Stablecoin"
+CHAIN_ID=99
 ADDRESS=$DAI
 
 
 DOMAIN_SEPARATOR=$(seth keccak \
      $(seth keccak $(seth --from-ascii "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"))\
-$(echo $(seth keccak $(seth --from-ascii "Dai Semi-Automated Permit Office"))\
+$(echo $(seth keccak $(seth --from-ascii "$NAME"))\
 $(seth keccak $(seth --from-ascii $VERSION))$(seth --to-uint256 $CHAIN_ID)\
 $(seth --to-uint256 $ADDRESS) | sed 's/0x//g'))
 #echo $DOMAIN_SEPARATOR
@@ -31,13 +32,14 @@ NONCE=$2
 ALLOWED=$3
 DEADLINE=${4:-0}
 
-#echo "Sign the following permit?"
-#echo "HOLDER $HOLDER"
-#echo "SPENDER $SPENDER"
-#echo "NONCE $NONCE"
-#echo "ALLOWED $ALLOWED"
-#echo "DEADLINE $DEADLINE"
-#echo $DOMAIN_SEPARATOR
+echo "Sign the following permit?"
+echo "HOLDER $HOLDER"
+echo "SPENDER $SPENDER"
+echo "NONCE $NONCE"
+echo "ALLOWED $ALLOWED"
+echo "DEADLINE $DEADLINE"
+echo $DOMAIN_SEPARATOR
+echo $permit_TYPEHASH
 
 MESSAGE=0x1901\
 $(echo $DOMAIN_SEPARATOR\

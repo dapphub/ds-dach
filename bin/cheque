@@ -1,11 +1,16 @@
 #!/bin/bash
 display_usage() {
-  echo "Usage: <spender> <nonce> <allowed> [expiry]"
+   echo "Usage: <receiver> <amount> <fee> <nonce> [expiry]"
 }
+if [ "$#" -ne 4 ]; then
+    display_usage
+    exit 0
+fi
+
 
 #Domain separator data
 VERSION='1'
-CHAIN_ID=1
+CHAIN_ID=99
 ADDRESS=$DACH
 
 
@@ -14,7 +19,7 @@ DOMAIN_SEPARATOR=$(seth keccak \
 $(echo $(seth keccak $(seth --from-ascii "Dai Automated Clearing House"))\
 $(seth keccak $(seth --from-ascii $VERSION))$(seth --to-uint256 $CHAIN_ID)\
 $(seth --to-uint256 $ADDRESS) | sed 's/0x//g'))
-#echo $DOMAIN_SEPARATOR
+echo $DOMAIN_SEPARATOR
 
 #Permit type data
 cheque_TYPEHASH=$(seth keccak $(seth --from-ascii "Cheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry)"))
