@@ -30,10 +30,11 @@ contract DaiLike {
 
 
 contract Dach {
-  DaiLike dai;
-  Uniswappy uniswap;
+  DaiLike public dai;
+  Uniswappy public uniswap;
   mapping (address => uint256) public nonces;
-  string public version;
+  string public constant version = "1";
+  string public constant name = "Dai Automated Clearing House";
 
   // --- EIP712 niceties ---
   bytes32 public DOMAIN_SEPARATOR;
@@ -44,14 +45,13 @@ contract Dach {
   //keccak256("Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry)");
   bytes32 constant public SWAP_TYPEHASH = 0x33971c92a3406b72ebe36f29bb63a906f3b2e543c06bf27eaafb0d2d20429d7b;
 
-  constructor(address _dai, address _uniswap, string memory _version, uint256 chainId) public {
+  constructor(address _dai, address _uniswap, uint256 chainId) public {
     dai = DaiLike(_dai);
     uniswap = Uniswappy(_uniswap);
-    version = _version;
     DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256("Dai Automated Clearing House"),
-            keccak256(bytes(_version)),
+            keccak256(bytes(name)),
+            keccak256(bytes(version)),
             chainId,
             address(this)
         ));

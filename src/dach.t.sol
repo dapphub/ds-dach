@@ -51,7 +51,7 @@ contract DachTest is DSTest {
         address template = write(uniswapTemplateInitCode);
         factory.initializeFactory(template);
         uniswap = Uniswappy(factory.createExchange(address(token)));
-        dach = new Dach(address(token), address(uniswap), '1', 99);
+        dach = new Dach(address(token), address(uniswap), 99);
     }
 
     function createToken() internal returns (Dai) {
