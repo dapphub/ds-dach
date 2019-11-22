@@ -25,11 +25,14 @@ contract Uniswappy {
 
 contract DaiLike {
   function transferFrom(address src, address dst, uint wad) public returns (bool) {}
-  function approve(address usr, uint wad) public returns (bool) {}
+  function transfer(address dst, uint wad) public returns (bool) {}
 }
 
 contract ChaiLike {
   function join(address dst, uint wad) public;
+  function exit(address dst, uint wad) public;
+  function approve(address usr, uint wad) public returns (bool) {}
+  function transferFrom(address src, address dst, uint wad) public returns (bool) {}
 }
 
 
@@ -39,7 +42,7 @@ contract Dach {
   Uniswappy public uniswap;
   mapping (address => uint256) public nonces;
   string public constant version = "1";
-  string public constant name = "Dai Automated Clearing House";
+  string public constant name = "Chai Automated Clearing House";
 
   // --- EIP712 niceties ---
   bytes32 public DOMAIN_SEPARATOR;
@@ -50,9 +53,10 @@ contract Dach {
   //keccak256("Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry)");
   bytes32 constant public SWAP_TYPEHASH = 0x33971c92a3406b72ebe36f29bb63a906f3b2e543c06bf27eaafb0d2d20429d7b;
 
-  //keccak256("Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry)");
-  bytes32 constant public JOIN_TYPEHASH = 0x33971c92a3406b72ebe36f29bb63a906f3b2e543c06bf27eaafb0d2d20429d7b;
+  //keccak256("Exit...
+  bytes32 constant public EXIT_TYPEHASH = 0x33971c92a3406b72ebe36f29bb63a906f3b2e543c06bf27eaafb0d2d20429d7b;
 
+  
   constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
     dai = DaiLike(_dai);
     uniswap = Uniswappy(_uniswap);
@@ -66,6 +70,7 @@ contract Dach {
   }
 
 
+  //All fees paid in chai in this contract
   function clear(address sender, address receiver, uint amount, uint fee, uint nonce,
                  uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
     bytes32 digest =
@@ -83,8 +88,8 @@ contract Dach {
     require(sender == ecrecover(digest, v, r, s), "invalid cheque");
     require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
-    dai.transferFrom(sender, taxman, fee);
-    dai.transferFrom(sender, receiver, amount);
+    chai.transferFrom(sender, taxman, fee);
+    chai.transferFrom(sender, receiver, amount);
   }
 
   function swapToEth(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
@@ -102,30 +107,29 @@ contract Dach {
                               expiry)))), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
-    dai.transferFrom(sender, address(this), amount);
-    dai.transferFrom(sender, taxman, fee);
-    dai.approve(address(uniswap), amount);
+    chai.transferFrom(sender, address(this), amount);
+    chai.transferFrom(sender, taxman, fee);
+    chai.approve(address(uniswap), amount);
     return uniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
 
-  function joinChai(address sender, address to, uint amount, uint fee, uint nonce,
+  function exitChai(address sender, address to, uint amount, uint fee, uint nonce,
                     uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
     require(sender == ecrecover(
       keccak256(abi.encodePacked(
          "\x19\x01",
          DOMAIN_SEPARATOR,
-         keccak256(abi.encode(JOIN_TYPEHASH,
+         keccak256(abi.encode(EXIT_TYPEHASH,
                               sender,
                               to,
                               amount,
                               fee,
                               nonce,
-                              expiry)))), v, r, s), "invalid join");
+                              expiry)))), v, r, s), "invalid exit");
     require(nonce == nonces[sender]++, "invalid nonce");
-    require(expiry == 0 || now <= expiry, "join expired");
-    dai.transferFrom(sender, address(this), amount);
-    dai.approve(address(chai), amount);
-    chai.join(sender, amount);
-    dai.transferFrom(sender, taxman, fee);
+    require(expiry == 0 || now <= expiry, "exit expired");
+    chai.exit(sender, amount);
+    dai.transfer(sender, amount);
+    chai.transferFrom(sender, taxman, fee);
   }
 }
