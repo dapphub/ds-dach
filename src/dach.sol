@@ -59,7 +59,7 @@ contract Dach {
 
 
   function clear(address sender, address receiver, uint amount, uint fee, uint nonce,
-                 uint expiry, uint8 v, bytes32 r, bytes32 s, address taxMan) public {
+                 uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
     bytes32 digest =
       keccak256(abi.encodePacked(
          "\x19\x01",
@@ -73,14 +73,14 @@ contract Dach {
                               expiry))
       ));
     require(sender == ecrecover(digest, v, r, s), "invalid cheque");
-    require(nonce == nonces[sender]++, "invalid nonce");
+    require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
-    dai.transferFrom(sender, taxMan, fee);
+    dai.transferFrom(sender, taxman, fee);
     dai.transferFrom(sender, receiver, amount);
   }
 
   function swapToEth(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
-                     uint expiry, uint8 v, bytes32 r, bytes32 s, address taxMan) public returns (uint256) {
+                     uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public returns (uint256) {
     require(sender == ecrecover(
       keccak256(abi.encodePacked(
          "\x19\x01",
@@ -95,7 +95,7 @@ contract Dach {
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
     dai.transferFrom(sender, address(this), amount);
-    dai.transferFrom(sender, taxMan, fee);
+    dai.transferFrom(sender, taxman, fee);
     dai.approve(address(uniswap), amount);
     return uniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
