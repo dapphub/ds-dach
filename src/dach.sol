@@ -39,10 +39,12 @@ and paid to the `relayer`.
 Actions 1-3 requires that the user calls `dai.permit(dach)` before operating,
 action 4 requires `chai.permit(dach)`.
 */
+
 contract Dach {
   Dai public dai;
   Chai public chai;
   Uniswappy public uniswap;
+  
   mapping (address => uint256) public nonces;
   string public constant version = "1";
   string public constant name = "Dai Automated Clearing House";
@@ -60,7 +62,7 @@ contract Dach {
   bytes32 constant public JOIN_TYPEHASH = 0xa057b6b80cbcf1fc4ee4d77dd1db61541437441e96559a0d015d833994e31779;
 
   //keccak256("Draw(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
-  bytes32 constant public DRAW_TYPEHASH = 0xa057b6b80cbcf1fc4ee4d77dd1db61541437441e96559a0d015d833994e31779;
+  bytes32 constant public DRAW_TYPEHASH = 0x50fb495ae763cde7b2d33d59ebf4500d4e9bf6405ff4f725042f2f6e2299abb9;
 
   
   constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
@@ -118,7 +120,7 @@ contract Dach {
                               relayer)))), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
-    require(relayer == msg.sender);
+    require(relayer == msg.sender, "wrong relayer");
     dai.transferFrom(sender, address(this), amount);
     dai.transferFrom(sender, msg.sender, fee);
     dai.approve(address(uniswap), amount);
@@ -131,7 +133,7 @@ contract Dach {
     require(sender == ecrecover(digest(JOIN_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid join");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "join expired");
-    require(relayer == msg.sender);
+    require(relayer == msg.sender, "wrong relayer");
     dai.transferFrom(sender, address(this), amount);
     dai.approve(address(chai), amount);
     chai.join(sender, amount);
@@ -141,12 +143,12 @@ contract Dach {
   //Requires chai.permit before executing
   function drawChai(address sender, address receiver, uint amount, uint fee, uint nonce,
                     uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
-    require(sender == ecrecover(digest(DRAW_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid exit");
+    require(sender == ecrecover(digest(DRAW_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid draw");
     require(nonce == nonces[sender]++, "invalid nonce");
-    require(expiry == 0 || now <= expiry, "exit expired");
-    require(relayer == msg.sender);
-    chai.draw(sender, amount);
-    chai.move(sender, msg.sender, fee);
+    require(expiry == 0 || now <= expiry, "draw expired");
+    require(relayer == msg.sender, "wrong relayer");
+    chai.draw(sender, amount + fee);
+    dai.transfer(sender, amount);
+    dai.transfer(msg.sender, fee);
   }
-
 }
