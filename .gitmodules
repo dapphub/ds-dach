@@ -7,3 +7,6 @@
 [submodule "lib/dss"]
 	path = lib/dss
 	url = https://github.com/dapphub/dss
+[submodule "lib/chai"]
+	path = lib/chai
+	url = https://github.com/dapphub/chai
