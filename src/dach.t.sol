@@ -18,8 +18,10 @@
 pragma solidity >=0.4.23;
 
 import "ds-test/test.sol";
-
-import "./dai.sol";
+import {Vat} from 'dss/vat.sol';
+import {Pot} from 'dss/pot.sol';
+import {Dai} from 'dss/dai.sol';
+import {DaiJoin} from 'dss/join.sol';
 import "./chai.sol";
 import "./dach.sol";
 

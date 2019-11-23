@@ -17,15 +17,12 @@
 
 pragma solidity >=0.4.23;
 
+import {Dai} from "dss/dai.sol";
+
 contract Uniswappy {
     function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens,
                                      uint256 deadline, address recipient) public returns (uint256) {}
     function addLiquidity(uint256 min_liquidity, uint256 max_tokens, uint256 deadline) payable public returns (uint256) {}
-}
-
-contract DaiLike {
-  function transferFrom(address src, address dst, uint wad) public returns (bool) {}
-  function approve(address usr, uint wad) public returns (bool) {}
 }
 
 contract ChaiLike {
@@ -34,7 +31,7 @@ contract ChaiLike {
 
 
 contract Dach {
-  DaiLike public dai;
+  Dai public dai;
   ChaiLike public chai;
   Uniswappy public uniswap;
   mapping (address => uint256) public nonces;
@@ -54,7 +51,7 @@ contract Dach {
   bytes32 constant public JOIN_TYPEHASH = 0x33971c92a3406b72ebe36f29bb63a906f3b2e543c06bf27eaafb0d2d20429d7b;
 
   constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
-    dai = DaiLike(_dai);
+    dai = Dai(_dai);
     chai = ChaiLike(_chai);
     uniswap = Uniswappy(_uniswap);
     DOMAIN_SEPARATOR = keccak256(abi.encode(
