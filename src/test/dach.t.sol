@@ -23,7 +23,6 @@ import {Pot} from 'dss/pot.sol';
 import {Dai} from 'dss/dai.sol';
 import {DaiJoin} from 'dss/join.sol';
 import "../dach.sol";
-import {Cach} from "../cach.sol";
 import {ChaiSetup, UniswapSetup} from "./uniswap.t.sol";
 
 contract FactoryLike {
@@ -44,7 +43,6 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
     //    Dai dai;
     //    Chai chai;
     Dach dach;
-    Cach cach;
     uint constant chainId = 99;
 
     address payable ali = 0x0595BBafaF6B4eAC0e41549E7E8b72193BFC68E5; //I am the greatest, I said that even before I knew I was.
@@ -56,7 +54,6 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
     function setUp() public {
       super.setUp();
       dach = new Dach(address(dai), address(uniswapdai), address(chai), 99);
-      cach = new Cach(address(dai), address(uniswapchai), address(chai), address(pot), 99);
     }
 
     function test_basic_sanity() public {
@@ -68,7 +65,6 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
         //used for signature generation testing
         assertEq(address(dai), address(0x959DC1D68ba3a9f6959239135bcbc854b781eb9a));
         assertEq(address(dai), address(dach.dai()));
-        assertEq(address(dai), address(cach.dai()));
     }
 
     function test_dach_address() public {

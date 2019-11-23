@@ -27,8 +27,6 @@ contract FactoryLike {
 }
 
 contract Uniswappy {
-    function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens,
-                                     uint256 deadline, address recipient) public returns (uint256) {}
     function addLiquidity(uint256 min_liquidity, uint256 max_tokens, uint256 deadline) payable public returns (uint256) {}
 }
 
