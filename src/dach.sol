@@ -55,6 +55,7 @@ contract Dach {
 
   constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
     dai = DaiLike(_dai);
+    chai = ChaiLike(_chai);
     uniswap = Uniswappy(_uniswap);
     DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -65,22 +66,23 @@ contract Dach {
         ));
   }
 
+  function digest(bytes32 hash, address src, address dst, uint amount, uint fee, uint nonce, uint expiry) internal view returns (bytes32) {
+         return keccak256(abi.encodePacked(
+                   "\x19\x01",
+                   DOMAIN_SEPARATOR,
+                   keccak256(abi.encode(hash,
+                                        src,
+                                        dst,
+                                        amount,
+                                        fee,
+                                        nonce,
+                                        expiry))
+                ));
+    }
 
   function clear(address sender, address receiver, uint amount, uint fee, uint nonce,
                  uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
-    bytes32 digest =
-      keccak256(abi.encodePacked(
-         "\x19\x01",
-         DOMAIN_SEPARATOR,
-         keccak256(abi.encode(CHEQUE_TYPEHASH,
-                              sender,
-                              receiver,
-                              amount,
-                              fee,
-                              nonce,
-                              expiry))
-      ));
-    require(sender == ecrecover(digest, v, r, s), "invalid cheque");
+    require(sender == ecrecover(digest(CHEQUE_TYPEHASH, sender, receiver, amount, fee, nonce, expiry), v, r, s), "invalid cheque");
     require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
     dai.transferFrom(sender, taxman, fee);
@@ -108,19 +110,9 @@ contract Dach {
     return uniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
 
-  function joinChai(address sender, address to, uint amount, uint fee, uint nonce,
+  function joinChai(address sender, address receiver, uint amount, uint fee, uint nonce,
                     uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
-    require(sender == ecrecover(
-      keccak256(abi.encodePacked(
-         "\x19\x01",
-         DOMAIN_SEPARATOR,
-         keccak256(abi.encode(JOIN_TYPEHASH,
-                              sender,
-                              to,
-                              amount,
-                              fee,
-                              nonce,
-                              expiry)))), v, r, s), "invalid join");
+    require(sender == ecrecover(digest(JOIN_TYPEHASH, sender, receiver, amount, fee, nonce, expiry), v, r, s), "invalid join");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "join expired");
     dai.transferFrom(sender, address(this), amount);
