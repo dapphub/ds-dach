@@ -16,8 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pragma solidity >=0.4.23;
-import "dss/dai.sol";
-import "./chai.sol";
+import {Dai} from "dss/dai.sol";
+import "chai/chai.sol";
 
 contract Uniswappy {
     function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens,
