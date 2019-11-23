@@ -77,7 +77,7 @@ contract Dach {
   }
 
   function digest(bytes32 hash, address src, address dst, uint amount, uint fee,
-                  uint nonce, uint expiry, address taxman) internal view returns (bytes32) {
+                  uint nonce, uint expiry, address relayer) internal view returns (bytes32) {
          return keccak256(abi.encodePacked(
                    "\x19\x01",
                    DOMAIN_SEPARATOR,
@@ -88,21 +88,22 @@ contract Dach {
                                         fee,
                                         nonce,
                                         expiry,
-                                        taxman))
+                                        relayer))
                 ));
     }
 
   function clear(address sender, address receiver, uint amount, uint fee, uint nonce,
-                 uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
-    require(sender == ecrecover(digest(CHEQUE_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, taxman), v, r, s), "invalid cheque");
+                 uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
+    require(sender == ecrecover(digest(CHEQUE_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid cheque");
     require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
-    dai.transferFrom(sender, taxman, fee);
+    require(relayer == msg.sender);
+    dai.transferFrom(sender, msg.sender, fee);
     dai.transferFrom(sender, receiver, amount);
   }
 
   function swapToEth(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
-                     uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public returns (uint256) {
+                     uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public returns (uint256) {
     require(sender == ecrecover(
       keccak256(abi.encodePacked(
          "\x19\x01",
@@ -114,35 +115,38 @@ contract Dach {
                               fee,
                               nonce,
                               expiry,
-                              taxman)))), v, r, s), "invalid swap");
+                              relayer)))), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
+    require(relayer == msg.sender);
     dai.transferFrom(sender, address(this), amount);
-    dai.transferFrom(sender, taxman, fee);
+    dai.transferFrom(sender, msg.sender, fee);
     dai.approve(address(uniswap), amount);
     return uniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
 
   //Convert @amount dai to chai
   function joinChai(address sender, address receiver, uint amount, uint fee, uint nonce,
-                    uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
-    require(sender == ecrecover(digest(JOIN_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, taxman), v, r, s), "invalid join");
+                    uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
+    require(sender == ecrecover(digest(JOIN_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid join");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "join expired");
+    require(relayer == msg.sender);
     dai.transferFrom(sender, address(this), amount);
     dai.approve(address(chai), amount);
     chai.join(sender, amount);
-    dai.transferFrom(sender, taxman, fee);
+    dai.transferFrom(sender, msg.sender, fee);
   }
   //Convert enough chai to yield @amount dai
   //Requires chai.permit before executing
   function drawChai(address sender, address receiver, uint amount, uint fee, uint nonce,
-                    uint expiry, uint8 v, bytes32 r, bytes32 s, address taxman) public {
-    require(sender == ecrecover(digest(DRAW_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, taxman), v, r, s), "invalid exit");
+                    uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
+    require(sender == ecrecover(digest(DRAW_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid exit");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "exit expired");
+    require(relayer == msg.sender);
     chai.draw(sender, amount);
-    chai.move(sender, taxman, fee);
+    chai.move(sender, msg.sender, fee);
   }
 
 }
