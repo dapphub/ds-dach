@@ -17,6 +17,7 @@
 
 pragma solidity >=0.4.23;
 import "dss/dai.sol";
+import "./chai.sol";
 
 contract Uniswappy {
     function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens,
@@ -24,17 +25,10 @@ contract Uniswappy {
     function addLiquidity(uint256 min_liquidity, uint256 max_tokens, uint256 deadline) payable public returns (uint256) {}
 }
 
-contract ChaiLike {
-  function join(address dst, uint wad) public;
-  function exit(address dst, uint wad) public;
-  function approve(address usr, uint wad) public returns (bool) {}
-  function transferFrom(address src, address dst, uint wad) public returns (bool) {}
-}
-
-
-contract Dach {
+contract Cach {
   Dai public dai;
-  ChaiLike public chai;
+  Chai public chai;
+  PotLike public pot;
   Uniswappy public uniswap;
   mapping (address => uint256) public nonces;
   string public constant version = "1";
@@ -53,9 +47,10 @@ contract Dach {
   bytes32 constant public EXIT_TYPEHASH = 0x33971c92a3406b72ebe36f29bb63a906f3b2e543c06bf27eaafb0d2d20429d7b;
 
   
-  constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
+  constructor(address _dai, address _uniswap, address _chai, address _pot, uint256 chainId) public {
     dai = Dai(_dai);
-    chai = ChaiLike(_chai);
+    chai = Chai(_chai);
+    pot = PotLike(_pot);
     uniswap = Uniswappy(_uniswap);
     DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -65,6 +60,16 @@ contract Dach {
             address(this)
         ));
   }
+
+  uint constant RAY = 10 ** 27;
+  function mul(uint x, uint y) internal pure returns (uint z) {
+    require(y == 0 || (z = x * y) / y == x);
+  }
+  function rmul(uint x, uint y) internal pure returns (uint z) {
+    // always rounds down
+    z = mul(x, y) / RAY;
+  }
+
 
   function digest(bytes32 hash, address src, address dst, uint amount, uint fee, uint nonce, uint expiry) internal view returns (bytes32) {
          return keccak256(abi.encodePacked(
@@ -118,7 +123,7 @@ contract Dach {
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "exit expired");
     chai.exit(sender, amount);
-    dai.transfer(sender, amount);
+    dai.transfer(sender, rmul(pot.chi(), amount)); //drip is called in chai.exit
     chai.transferFrom(sender, taxman, fee);
   }
 }
