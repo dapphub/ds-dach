@@ -63,8 +63,7 @@ contract Dach {
 
   //keccak256("Draw(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
   bytes32 constant public DRAW_TYPEHASH = 0x50fb495ae763cde7b2d33d59ebf4500d4e9bf6405ff4f725042f2f6e2299abb9;
-
-  
+ 
   constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
     dai = Dai(_dai);
     chai = Chai(_chai);
@@ -77,6 +76,11 @@ contract Dach {
             address(this)
         ));
   }
+
+  function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x);
+  }
+
 
   function digest(bytes32 hash, address src, address dst, uint amount, uint fee,
                   uint nonce, uint expiry, address relayer) internal view returns (bytes32) {
@@ -136,7 +140,7 @@ contract Dach {
     require(relayer == msg.sender, "wrong relayer");
     dai.transferFrom(sender, address(this), amount);
     dai.approve(address(chai), amount);
-    chai.join(sender, amount);
+    chai.join(receiver, amount);
     dai.transferFrom(sender, msg.sender, fee);
   }
   //Convert enough chai to yield @amount dai
@@ -147,8 +151,8 @@ contract Dach {
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "draw expired");
     require(relayer == msg.sender, "wrong relayer");
-    chai.draw(sender, amount + fee);
-    dai.transfer(sender, amount);
+    chai.draw(sender, add(amount, fee));
+    dai.transfer(receiver, amount);
     dai.transfer(msg.sender, fee);
   }
 }
