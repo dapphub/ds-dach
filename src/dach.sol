@@ -15,35 +15,45 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity >=0.4.23;
+pragma solidity >=0.5.2;
 
-import {Dai} from "dss/dai.sol";
-import {Chai} from "chai/chai.sol";
+contract TokenLike {
+  function transferFrom(address from, address to, uint256 amount) public returns (bool);
+  function approve(address to, uint256 amount) public returns (bool);
+  function balanceOf(address to) public returns (uint);
+  function join(address to, uint256 amount) public;
+  function exit(address from, uint256 amount) public;
+}
 
 contract Uniswappy {
     function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens,
                                      uint256 deadline, address recipient) public returns (uint256) ;
 }
+/*
+The Dai automated clearing house demonstrates the generality of the `permit()` pattern,
+allowing users perform the following actions via signatures, paying for the transaction fee
+in the native token instead of eth.
 
-/*The Dai automated clearing house demonstrates the generality of the `permit()` pattern,
-allowing users perform the following actions without paying for gas. 
+1. Dai transfers (DaiCheque)
+2. Sell dai for eth (DaiSwap)
+3. Convert dai to chai (ChaiJoin)
+4. Chai transfers (ChaiCheque)
+5. Sell dai for eth (ChaiSwap)
+6. Convert chai to dai (ChaiExit)
 
-1. Dai transfers (clear)
-2. Sell dai for eth (swapToEth)
-3. Convert dai to chai (join)
-4. Convert chai to dai (draw)
-
-All `fee`s are denominated in dai 
+All `fee`s are denominated in the "source currency", 
 and paid to the `relayer`.
 
-Actions 1-3 requires that the user calls `dai.permit(dach)` before operating,
-action 4 requires `chai.permit(dach)`.
+In other words, actions 1-3 have their `fee` denominated in Dai
+and require the `sender` to `permit` the dach before performed,
+while actions 4-6 have their `fee` denominated in Chai.
 */
 
 contract Dach {
-  Dai public dai;
-  Chai public chai;
-  Uniswappy public uniswap;
+  TokenLike public dai;
+  TokenLike public chai;
+  Uniswappy public daiUniswap;
+  Uniswappy public chaiUniswap;
   
   mapping (address => uint256) public nonces;
   string public constant version = "1";
@@ -52,107 +62,128 @@ contract Dach {
   // --- EIP712 niceties ---
   bytes32 public DOMAIN_SEPARATOR;
 
-  //keccak256("Cheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
-  bytes32 constant public CHEQUE_TYPEHASH = 0x5c32085874a8e37b372097d5c7fabfa97e843d5d09490d4bc53748425c2289bf;
+  //keccak256("DaiCheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
+  bytes32 constant public DAICHEQUE_TYPEHASH = 0x2d4b89f08cf38e73f267d45cf655caeec6ec2d1958ff3f7c04bc93b285692ba0; //TODO
 
-  //keccak256("Swap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
-  bytes32 constant public SWAP_TYPEHASH = 0x4ccd19bde5e17e8dd1d6fea249311cb6d9b45e0e4ae9ff0eef3d49372c1eee64;
+  //keccak256("DaiSwap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
+  bytes32 constant public DAISWAP_TYPEHASH = 0x569d16faba32239b19edb6a011b30ad0035ca192ef2f179c46edfb1d50280084; //TODO
 
-  //keccak256("Join(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
-  bytes32 constant public JOIN_TYPEHASH = 0xa057b6b80cbcf1fc4ee4d77dd1db61541437441e96559a0d015d833994e31779;
+  //keccak256("ChaiJoin(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
+  bytes32 constant public CHAIJOIN_TYPEHASH = 0x9b0767889629ab3e37d797178aba3047e96d19239c5977f2c56ea8da3275cb05; //TODO
 
-  //keccak256("Draw(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
-  bytes32 constant public DRAW_TYPEHASH = 0x50fb495ae763cde7b2d33d59ebf4500d4e9bf6405ff4f725042f2f6e2299abb9;
+  //keccak256("ChaiCheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
+  bytes32 constant public CHAICHEQUE_TYPEHASH = 0x77ae2fa9d8312ad1d4a645b9102258e9fc5e64280c2198da01c426cbcc966fb1; //TODO
+
+  //keccak256("ChaiSwap(address sender,uint256 amount,uint256 min_eth,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
+  bytes32 constant public CHAISWAP_TYPEHASH = 0x7cf3e6fd2031b292afffa62c2dbc5e4212855cadd6455a36bed415f2b8246a47; //TODO
+
+  //keccak256("ChaiExit(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
+  bytes32 constant public CHAIEXIT_TYPEHASH = 0x69fa4cd566f89a9c8d4e3ca437a7fbc893137962cb1b036c59ceeb1415c58c01; //TODO
  
-  constructor(address _dai, address _uniswap, address _chai, uint256 chainId) public {
-    dai = Dai(_dai);
-    chai = Chai(_chai);
-    uniswap = Uniswappy(_uniswap);
+  constructor(address _dai, address _daiUniswap, address _chai, address _chaiUniswap, uint256 chainId) public {
+    dai = TokenLike(_dai);
+    chai = TokenLike(_chai);
+    daiUniswap = Uniswappy(_daiUniswap);
+    chaiUniswap = Uniswappy(_chaiUniswap);
+    dai.approve(_chai, uint(-1));
+    dai.approve(_daiUniswap, uint(-1));
+    chai.approve(_chaiUniswap, uint(-1));
     DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes(name)),
-            keccak256(bytes(version)),
-            chainId,
-            address(this)
-        ));
+            keccak256(bytes(name)), keccak256(bytes(version)), chainId, address(this)));
   }
-
-  function add(uint x, uint y) internal pure returns (uint z) {
-        require((z = x + y) >= x);
-  }
-
 
   function digest(bytes32 hash, address src, address dst, uint amount, uint fee,
                   uint nonce, uint expiry, address relayer) internal view returns (bytes32) {
          return keccak256(abi.encodePacked(
                    "\x19\x01",
                    DOMAIN_SEPARATOR,
-                   keccak256(abi.encode(hash,
-                                        src,
-                                        dst,
-                                        amount,
-                                        fee,
-                                        nonce,
-                                        expiry,
-                                        relayer))
+                   keccak256(abi.encode(hash, src, dst, amount, fee, nonce, expiry, relayer))
                 ));
     }
 
-  function clear(address sender, address receiver, uint amount, uint fee, uint nonce,
-                 uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
-    require(sender == ecrecover(digest(CHEQUE_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid cheque");
+  function digest(bytes32 hash, address src, uint amount, uint min_eth, uint fee,
+                  uint nonce, uint expiry, address relayer) internal view returns (bytes32) {
+         return keccak256(abi.encodePacked(
+                   "\x19\x01",
+                   DOMAIN_SEPARATOR,
+                   keccak256(abi.encode(hash, src, amount, min_eth, fee, nonce, expiry, relayer))
+                ));
+    }
+
+  // --- Dai actions ---
+  //Requires dai.permit before execution
+
+  //Transfers @amount dai to the receiver from the sender
+  function daiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
+                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
+    require(sender == ecrecover(digest(DAICHEQUE_TYPEHASH, sender, receiver,
+                                       amount, fee, nonce, expiry, relayer), v, r, s), "invalid cheque");
     require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
-    require(relayer == msg.sender);
-    dai.transferFrom(sender, msg.sender, fee);
+    dai.transferFrom(sender, relayer, fee);
     dai.transferFrom(sender, receiver, amount);
   }
 
-  function swapToEth(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
-                     uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public returns (uint256) {
-    require(sender == ecrecover(
-      keccak256(abi.encodePacked(
-         "\x19\x01",
-         DOMAIN_SEPARATOR,
-         keccak256(abi.encode(SWAP_TYPEHASH,
-                              sender,
-                              amount,
-                              min_eth,
-                              fee,
-                              nonce,
-                              expiry,
-                              relayer)))), v, r, s), "invalid swap");
+  //Sell dai for eth on uniswap
+  function daiSwap(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
+                   uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256) {
+    require(sender == ecrecover(digest(DAISWAP_TYPEHASH, sender, amount,
+                                       min_eth, fee, nonce, expiry, relayer), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
-    require(relayer == msg.sender, "wrong relayer");
     dai.transferFrom(sender, address(this), amount);
-    dai.transferFrom(sender, msg.sender, fee);
-    dai.approve(address(uniswap), amount);
-    return uniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
+    dai.transferFrom(sender, relayer, fee);
+    return daiUniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
 
   //Convert @amount dai to chai
   function joinChai(address sender, address receiver, uint amount, uint fee, uint nonce,
-                    uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
-    require(sender == ecrecover(digest(JOIN_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid join");
+                    uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
+    require(sender == ecrecover(digest(CHAIJOIN_TYPEHASH, sender, receiver,
+                                       amount, fee, nonce, expiry, relayer), v, r, s), "invalid join");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "join expired");
-    require(relayer == msg.sender, "wrong relayer");
     dai.transferFrom(sender, address(this), amount);
-    dai.approve(address(chai), amount);
+    dai.transferFrom(sender, relayer, fee);
     chai.join(receiver, amount);
-    dai.transferFrom(sender, msg.sender, fee);
   }
-  //Convert enough chai to yield @amount dai
-  //Requires chai.permit before executing
-  function drawChai(address sender, address receiver, uint amount, uint fee, uint nonce,
-                    uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
-    require(sender == ecrecover(digest(DRAW_TYPEHASH, sender, receiver, amount, fee, nonce, expiry, relayer), v, r, s), "invalid draw");
+
+  // --- Chai actions ---
+  //Requires chai.permit before execution
+
+  //Transfers @amount chai to the receiver from the sender
+  function chaiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
+                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
+    require(sender == ecrecover(digest(CHAICHEQUE_TYPEHASH, sender, receiver,
+                                       amount, fee, nonce, expiry, relayer), v, r, s), "invalid cheque");
+    require(nonce  == nonces[sender]++, "invalid nonce");
+    require(expiry == 0 || now <= expiry, "cheque expired");
+    chai.transferFrom(sender, relayer, fee);
+    chai.transferFrom(sender, receiver, amount);
+  }
+
+  //Sell chai for eth on uniswap
+  function chaiSwap(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
+                    uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256) {
+    require(sender == ecrecover(digest(CHAISWAP_TYPEHASH, sender, amount,
+                                       min_eth, fee, nonce, expiry, relayer), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
-    require(expiry == 0 || now <= expiry, "draw expired");
-    require(relayer == msg.sender, "wrong relayer");
-    chai.draw(sender, add(amount, fee));
-    dai.transfer(receiver, amount);
-    dai.transfer(msg.sender, fee);
+    require(expiry == 0 || now <= expiry, "swap expired");
+    chai.transferFrom(sender, address(this), amount);
+    chai.transferFrom(sender, relayer, fee);
+    return chaiUniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
+  }
+
+  //Convert amount chai to dai
+  function exitChai(address sender, address receiver, uint amount, uint fee, uint nonce,
+                    uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
+    require(sender == ecrecover(digest(CHAIEXIT_TYPEHASH, sender, receiver,
+                                       amount, fee, nonce, expiry, relayer), v, r, s), "invalid exit");
+    require(nonce == nonces[sender]++, "invalid nonce");
+    require(expiry == 0 || now <= expiry, "exit expired");
+    chai.exit(sender, amount);
+    dai.transferFrom(address(this), receiver, dai.balanceOf(address(this)));
+    chai.transferFrom(sender, relayer, fee);
   }
 }
