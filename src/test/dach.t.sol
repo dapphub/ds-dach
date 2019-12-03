@@ -37,8 +37,8 @@ contract FrontRunner {
   }
 
   function frontRun(address sender, address receiver, uint amount, uint fee, uint nonce,
-                    uint expiry, uint8 v, bytes32 r, bytes32 s, address relayer) public {
-    dach.clear(sender,receiver,amount,fee,nonce,expiry,v,r,s,relayer);
+                    uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
+    dach.daiCheque(sender,receiver,amount,fee,nonce,expiry,relayer,v,r,s);
   }
 }
 
@@ -68,7 +68,7 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
     function setUp() public {
       super.setUp();
       hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-      dach = new Dach(address(dai), address(uniswapdai), address(chai), 99);
+      dach = new Dach(address(dai), address(uniswapdai), address(chai), address(uniswapchai), 99);
       frontRunner = new FrontRunner(dach);
       permit_dach();
       dai.transfer(ali, 100);             
@@ -129,7 +129,7 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
       bytes32 r = 0xcd72cd18daed29617ff6c85af4887530ec54eb1eb41b5cc39912bfa78c9ce9e7;
       bytes32 s = 0x4af4a80dd4c1b3b5096f3ab66050eb7b7d7e1b41508dabd1f37e02a8872d78fc;
       uint8 v = 27;
-      dach.clear(ali, del, 10, 1, 0, 0, v, r, s, address(this));
+      dach.daiCheque(ali, del, 10, 1, 0, 0, address(this), v, r, s);
       assertEq(dach.nonces(ali),1);
       assertEq(dai.balanceOf(ali), 89);
       assertEq(dai.balanceOf(del), 10);
@@ -140,14 +140,14 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
       bytes32 r = 0xcd72cd18daed29617ff6c85af4887530ec54eb1eb41b5cc39912bfa78c9ce9e7;
       bytes32 s = 0x4af4a80dd4c1b3b5096f3ab66050eb7b7d7e1b41508dabd1f37e02a8872d78fc;
       uint8 v = 27;
-      frontRunner.frontRun(ali, del, 10, 1, 0, 0, v, r, s, address(this));
+      frontRunner.frontRun(ali, del, 10, 1, 0, 0, address(this), v, r, s);
     }
 
     function test_swap() public {
       bytes32 r = 0x3309811fb2251bdd213b2d9a4d0a508ed738a5c711b7070d26212d5339255d80;
       bytes32 s = 0x3b89f27b65f3ecb9bcbea56edc9d8e82b4b9a0e2a5b9127e2c33922cd1a17a83;
       uint8 v = 28;
-      dach.swapToEth(ali, 10, 332665999, 1, 0, 0, v, r, s, address(this));
+      dach.daiSwap(ali, 10, 332665999, 1, 0, 0, address(this), v, r, s);
       assertEq(dach.nonces(ali),1);
       assertEq(dai.balanceOf(ali), 89);
       assertEq(ali.balance, 332665999);
@@ -158,7 +158,7 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
       bytes32 r = 0xad36f2f7c0017c6afa5b3b8977cc9a76fc6afc9dccbeb8cf916baff48923a27a;
       bytes32 s = 0x4ae8bc565d188e9b31ea59c0ffbe2822910aaebc0f830d32177490c82d07e070;
       uint8 v = 28;
-      dach.joinChai(ali, ali, 50, 1, 0, 0, v, r, s, address(this));
+      dach.joinChai(ali, ali, 50, 1, 0, 0, address(this), v, r, s);
       assertEq(chai.dai(ali), 50);
       assertEq(chai.balanceOf(ali), rmul(50, pot.chi()));
       assertEq(dai.balanceOf(address(this)), preBalance + 1);
@@ -187,7 +187,7 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
       bytes32 r = 0x3969b18fbfa5e3a88e684b74d4915945dbd994f45638dd34ec80ccd41d172863;
       bytes32 s = 0x69f3d1fec1c3d3b055c9519db14e35341adbbb05bfb3b8cd95935eeb49117376;
       uint8 v = 28;
-      dach.drawChai(ali, ali, 50, 1, 1, 0, v, r, s, address(this));
+      dach.exitChai(ali, ali, 50, 1, 1, 0, address(this), v, r, s);
       //An extra wei dai was given since chai.draw rounds up
       assertEq(chai.dai(ali), 1);
       assertEq(dai.balanceOf(ali), 99);
