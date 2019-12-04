@@ -1,8 +1,8 @@
 #!/bin/bash
 display_usage() {
-   echo "Usage: <receiver> <amount> <fee> <nonce> [expiry]"
+   echo "Usage: <receiver> <amount> <fee> <nonce> [relayer] [expiry]"
 }
-if [ "$#" -ne 4 ]; then
+if [ "$#" -ne 5 ]; then
     display_usage
     exit 0
 fi
@@ -22,7 +22,7 @@ $(seth --to-uint256 $ADDRESS) | sed 's/0x//g'))
 #echo $DOMAIN_SEPARATOR
 
 #Cheque type data
-cheque_TYPEHASH=$(seth keccak $(seth --from-ascii "Cheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)"))
+cheque_TYPEHASH=$(seth keccak $(seth --from-ascii "ChaiCheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)"))
 echo $cheque_TYPEHASH
 
 #permit data
@@ -31,8 +31,8 @@ RECEIVER=$1
 AMOUNT=$2
 FEE=$3
 NONCE=${4:-0}
-EXPIRY=${5:-0}
-RELAYER=${6:-0x47f5b4DDAFD69A6271f3E15518076e0305a2C722}
+RELAYER=${5:-$ETH_FROM}
+EXPIRY=${6:-0}
 
 MESSAGE=0x1901\
 $(echo $DOMAIN_SEPARATOR\

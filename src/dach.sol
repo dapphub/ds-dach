@@ -125,7 +125,7 @@ contract Dach {
   }
 
   //Sell dai for eth on uniswap
-  function daiSwap(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
+  function daiSwap(address sender, uint amount, uint min_eth, uint fee, uint nonce,
                    uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256) {
     require(sender == ecrecover(digest(DAISWAP_TYPEHASH, sender, amount,
                                        min_eth, fee, nonce, expiry, relayer), v, r, s), "invalid swap");
@@ -163,7 +163,7 @@ contract Dach {
   }
 
   //Sell chai for eth on uniswap
-  function chaiSwap(address payable sender, uint amount, uint min_eth, uint fee, uint nonce,
+  function chaiSwap(address sender, uint amount, uint min_eth, uint fee, uint nonce,
                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256) {
     require(sender == ecrecover(digest(CHAISWAP_TYPEHASH, sender, amount,
                                        min_eth, fee, nonce, expiry, relayer), v, r, s), "invalid swap");
