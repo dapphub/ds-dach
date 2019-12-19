@@ -1,4 +1,4 @@
-/// dach.sol -- An automated clearing house
+/// dach.sol -- Dai automated clearing house
 
 // Copyright (C) 2019  Martin Lundfall
 

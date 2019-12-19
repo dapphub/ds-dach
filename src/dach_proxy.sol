@@ -1,23 +1,24 @@
 pragma solidity >=0.6.0;
-pragma ABIEncoderV2;
+pragma experimental ABIEncoderV2;
+
 interface DachLike {
     function daiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
-                       uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public;
+                       uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) external;
     function daiSwap(address sender, uint amount, uint min_eth, uint fee, uint nonce,
-                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256);
+                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) external returns (uint256);
     
     function joinChai(address sender, address receiver, uint amount, uint fee, uint nonce,
-                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public;
+                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) external;
     function chaiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
-                        uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public;
+                        uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) external;
     function chaiSwap(address sender, uint amount, uint min_eth, uint fee, uint nonce,
-                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256);
+                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) external returns (uint256);
     function exitChai(address sender, address receiver, uint amount, uint fee, uint nonce,
-                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public;
+                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) external;
 
 }
 
-//wen solidity 0.6.0
+//wow solidity 0.6.0
 struct signedPermit {
     address holder;
     address spender;
@@ -35,7 +36,7 @@ interface DaiLike {
 }
 
 
-contract withPermit is DaiLike {
+contract withPermit {
 
   DachLike dach;
   DaiLike dai;
