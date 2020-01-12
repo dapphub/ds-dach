@@ -1,6 +1,6 @@
 /// dach.sol -- Dai automated clearing house
 
-// Copyright (C) 2019  Martin Lundfall
+// Copyright (C) 2020  Martin Lundfall
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,19 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity >=0.5.2;
+pragma solidity >=0.5.12;
 
-contract TokenLike {
-  function transferFrom(address from, address to, uint256 amount) public returns (bool);
-  function approve(address to, uint256 amount) public returns (bool);
-  function balanceOf(address to) public returns (uint);
-  function join(address to, uint256 amount) public;
-  function exit(address from, uint256 amount) public;
+interface TokenLike {
+  function transferFrom(address from, address to, uint256 amount) external returns (bool);
+  function approve(address to, uint256 amount) external returns (bool);
+  function balanceOf(address to) external returns (uint);
+  function join(address to, uint256 amount) external;
+  function exit(address from, uint256 amount) external;
 }
 
-contract Uniswappy {
+interface Uniswappy {
     function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_tokens,
-                                     uint256 deadline, address recipient) public returns (uint256) ;
+                uint256 deadline, address recipient) external returns (uint256);
 }
 /*
 The Dai automated clearing house demonstrates the generality of the `permit()` pattern,
@@ -51,17 +51,21 @@ a `chai.permit` in order to succeed.
 */
 
 contract Dach {
-  TokenLike public dai;
-  TokenLike public chai;
-  Uniswappy public daiUniswap;
-  Uniswappy public chaiUniswap;
+  TokenLike public constant dai = TokenLike(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+  TokenLike public constant chai = TokenLike(0x06AF07097C9Eeb7fD685c692751D5C66dB49c215);
+  Uniswappy public constant daiUniswap = Uniswappy(0x2a1530C4C41db0B0b2bB646CB5Eb1A67b7158667);
+  Uniswappy public constant chaiUniswap = Uniswappy(0x6C3942B383bc3d0efd3F36eFa1CBE7C8E12C8A2B);
   
   mapping (address => uint256) public nonces;
   string public constant version = "1";
   string public constant name = "Dai Automated Clearing House";
 
   // --- EIP712 niceties ---
-  bytes32 public DOMAIN_SEPARATOR;
+  //keccak256(abi.encode(
+  //   keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+  //   keccak256(bytes(name)), keccak256(bytes(version)), chainId, address(this)));
+  //generate with ADDRESS=$(dapp address $ETH_FROM $(seth nonce $ETH_FROM)) CHAIN_ID=1 ./bin/domain_separator
+  bytes32 constant public DOMAIN_SEPARATOR = 0x12941727324f08818b6823ad59845bef3c6e4139428eb3fd9490efeb9d088969;
 
   //keccak256("DaiCheque(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
   bytes32 constant public DAICHEQUE_TYPEHASH = 0x2d4b89f08cf38e73f267d45cf655caeec6ec2d1958ff3f7c04bc93b285692ba0;
@@ -81,17 +85,10 @@ contract Dach {
   //keccak256("ChaiExit(address sender,address receiver,uint256 amount,uint256 fee,uint256 nonce,uint256 expiry,address relayer)");
   bytes32 constant public CHAIEXIT_TYPEHASH = 0x69fa4cd566f89a9c8d4e3ca437a7fbc893137962cb1b036c59ceeb1415c58c01;
  
-  constructor(address _dai, address _daiUniswap, address _chai, address _chaiUniswap, uint256 chainId) public {
-    dai = TokenLike(_dai);
-    chai = TokenLike(_chai);
-    daiUniswap = Uniswappy(_daiUniswap);
-    chaiUniswap = Uniswappy(_chaiUniswap);
-    dai.approve(_chai, uint(-1));
-    dai.approve(_daiUniswap, uint(-1));
-    chai.approve(_chaiUniswap, uint(-1));
-    DOMAIN_SEPARATOR = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes(name)), keccak256(bytes(version)), chainId, address(this)));
+  constructor() public {
+    dai.approve(address(chai), uint(-1));
+    dai.approve(address(daiUniswap), uint(-1));
+    chai.approve(address(chaiUniswap), uint(-1));
   }
 
   function digest(bytes32 hash, address src, address dst, uint amount, uint fee,

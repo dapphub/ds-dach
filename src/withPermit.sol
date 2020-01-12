@@ -1,3 +1,20 @@
+/// dach.sol -- Dai automated clearing house
+
+// Copyright (C) 2020  Martin Lundfall
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 pragma solidity >=0.5.12;
 pragma experimental ABIEncoderV2;
 
@@ -33,9 +50,9 @@ contract withPermit {
     bytes32 s;
   }
 
-  DaiLike  public constant dai  = DaiLike(0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa);
-  DaiLike  public constant chai = DaiLike(0xB641957b6c29310926110848dB2d464C8C3c3f38);
-  DachLike public constant dach = DachLike(0x2ef865CA017912c872826e25736A7A11f94235AF);
+  DaiLike  public constant dai  = DaiLike(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+  DaiLike  public constant chai = DaiLike(0x06AF07097C9Eeb7fD685c692751D5C66dB49c215);
+  DachLike public constant dach = DachLike(0x64043a98f097fD6ef0D3ad41588a6B0424723b3a);
 
   function daiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s,

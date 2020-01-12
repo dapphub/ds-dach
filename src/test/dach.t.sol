@@ -68,7 +68,7 @@ contract DachTest is DSTest, ChaiSetup, UniswapSetup {
     function setUp() public {
       super.setUp();
       hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-      dach = new Dach(address(dai), address(uniswapdai), address(chai), address(uniswapchai), 99);
+      dach = new Dach();
       frontRunner = new FrontRunner(dach);
       daipermit_dach();
       chaipermit_dach();
