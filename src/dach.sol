@@ -108,12 +108,12 @@ contract Dach {
   }
 
   // --- Dai actions ---
-  //Requires dai.permit before execution
+  // Requires dai.permit before execution
 
-  //Transfers @amount dai to the receiver from the sender
+  // Transfer @amount dai to the receiver from the sender
   function daiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
                      uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
-    require(sender == ecrecover(digest(DAICHEQUE_TYPEHASH, sender, receiver,
+    require(sender != address(0) && sender == ecrecover(digest(DAICHEQUE_TYPEHASH, sender, receiver,
                                        amount, fee, nonce, expiry, relayer), v, r, s), "invalid cheque");
     require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
@@ -121,10 +121,10 @@ contract Dach {
     dai.transferFrom(sender, receiver, amount);
   }
 
-  //Sell dai for eth on uniswap
+  // Sell @amount dai for eth on uniswap
   function daiSwap(address sender, uint amount, uint min_eth, uint fee, uint nonce,
                    uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256) {
-    require(sender == ecrecover(digest(DAISWAP_TYPEHASH, sender, amount,
+    require(sender != address(0) && sender == ecrecover(digest(DAISWAP_TYPEHASH, sender, amount,
                                        min_eth, fee, nonce, expiry, relayer), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
@@ -133,10 +133,10 @@ contract Dach {
     return daiUniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
 
-  //Convert @amount dai to chai
+  // Convert @amount dai to chai
   function joinChai(address sender, address receiver, uint amount, uint fee, uint nonce,
                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
-    require(sender == ecrecover(digest(CHAIJOIN_TYPEHASH, sender, receiver,
+    require(sender != address(0) && sender == ecrecover(digest(CHAIJOIN_TYPEHASH, sender, receiver,
                                        amount, fee, nonce, expiry, relayer), v, r, s), "invalid join");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "join expired");
@@ -146,12 +146,12 @@ contract Dach {
   }
 
   // --- Chai actions ---
-  //Requires chai.permit before execution
+  // Requires chai.permit before execution
 
-  //Transfers @amount chai to the receiver from the sender
+  // Transfer @amount chai to the receiver from the sender
   function chaiCheque(address sender, address receiver, uint amount, uint fee, uint nonce,
                       uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
-    require(sender == ecrecover(digest(CHAICHEQUE_TYPEHASH, sender, receiver,
+    require(sender != address(0) && sender == ecrecover(digest(CHAICHEQUE_TYPEHASH, sender, receiver,
                                        amount, fee, nonce, expiry, relayer), v, r, s), "invalid cheque");
     require(nonce  == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "cheque expired");
@@ -159,10 +159,10 @@ contract Dach {
     chai.transferFrom(sender, receiver, amount);
   }
 
-  //Sell chai for eth on uniswap
+  // Sell @amount chai for eth on uniswap
   function chaiSwap(address sender, uint amount, uint min_eth, uint fee, uint nonce,
                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public returns (uint256) {
-    require(sender == ecrecover(digest(CHAISWAP_TYPEHASH, sender, amount,
+    require(sender != address(0) && sender == ecrecover(digest(CHAISWAP_TYPEHASH, sender, amount,
                                        min_eth, fee, nonce, expiry, relayer), v, r, s), "invalid swap");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "swap expired");
@@ -171,10 +171,10 @@ contract Dach {
     return chaiUniswap.tokenToEthTransferInput(amount, min_eth, now, sender);
   }
 
-  //Convert amount chai to dai
+  // Convert @amount chai to dai
   function exitChai(address sender, address receiver, uint amount, uint fee, uint nonce,
                     uint expiry, address relayer, uint8 v, bytes32 r, bytes32 s) public {
-    require(sender == ecrecover(digest(CHAIEXIT_TYPEHASH, sender, receiver,
+    require(sender != address(0) && sender == ecrecover(digest(CHAIEXIT_TYPEHASH, sender, receiver,
                                        amount, fee, nonce, expiry, relayer), v, r, s), "invalid exit");
     require(nonce == nonces[sender]++, "invalid nonce");
     require(expiry == 0 || now <= expiry, "exit expired");
